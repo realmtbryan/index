@@ -5,9 +5,17 @@ export interface Show {
   venue: string;
   city: string;
   state: string;
+  videoUrl?: string;
+  thumbnailUrl?: string;
+  notes?: string;
+  bandMembers?: string;
+  setlist?: string;
+  reviews?: string;
   year: number;
-  videoUrl: string;
-  setlist: string;
-  thumbnailUrl: string;
-  sourceType?: 'drive' | 'recap' | 'youtube';
+  sourceType?: 'drive' | 'youtube' | 'recap';
+}
+
+export interface YearGroup {
+  year: number;
+  shows: Show[];
 }
