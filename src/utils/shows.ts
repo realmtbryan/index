@@ -55,11 +55,12 @@ const RECAP_OR_PROMO_PATTERN =
   /\((?:recap|clip|promo|preview|trailer|teaser|highlight|highlights)\)|\b(?:show recap|tour recap|livestream preview|subscriber livestream|set preview|promo video|official trailer|teaser clip)\b/i;
 
 /**
- * Verified Nugs Subscriber Livestream opener previews / promo clips (e.g. ~17m YouTube promos
- * carrying "SUBSCRIBER LIVESTREAM" banners and zero full-show setlist) that otherwise clutter
- * the top of the Watchable & YouTube feeds.
+ * Verified short tour recaps (1–3 min official recap videos mistagged as youtube),
+ * single-song clips, and Nugs Subscriber Livestream opener previews (~17m promos)
+ * that should be hidden globally so only full, best-viewable concerts appear.
  */
-const KNOWN_LIVESTREAM_PREVIEW_IDS = new Set([
+const KNOWN_RECAP_OR_PROMO_IDS = new Set([
+  // 2026 Nugs Subscriber Livestream opener previews
   '2026-04-02-1489',
   '2026-10-03-extra',
   '2026-10-06-extra',
@@ -67,6 +68,19 @@ const KNOWN_LIVESTREAM_PREVIEW_IDS = new Set([
   '2026-10-24-extra',
   '2026-10-30-extra',
   '2026-10-31-extra',
+  // 2025 1–3 minute tour recap clips (mistagged as sourceType: 'youtube')
+  '2025-08-12-1441',
+  '2025-08-15-1442',
+  '2025-08-16-1443',
+  '2025-08-19-1444',
+  '2025-08-19-1444-part-1',
+  '2025-08-22-1446',
+  '2025-08-23-1447',
+  '2025-09-05-1448',
+  '2025-09-11-1450',
+  '2025-09-14-1452',
+  // 2021 single-song clip paired with a recap entry
+  '2021-07-12-extra-part-1',
 ]);
 
 /**
@@ -74,7 +88,7 @@ const KNOWN_LIVESTREAM_PREVIEW_IDS = new Set([
  */
 export function isRecapOrPromo(show: Show): boolean {
   if (show.sourceType === 'recap') return true;
-  if (KNOWN_LIVESTREAM_PREVIEW_IDS.has(show.id)) return true;
+  if (KNOWN_RECAP_OR_PROMO_IDS.has(show.id)) return true;
   if (RECAP_OR_PROMO_PATTERN.test(show.venue)) return true;
   if (show.notes && RECAP_OR_PROMO_PATTERN.test(show.notes)) return true;
   return false;

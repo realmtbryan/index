@@ -70,7 +70,7 @@ const COLLECTION_META: Record<
   video: {
     title: 'Watchable Concert Archive',
     subtitle:
-      'Full-length concert recordings playable directly from YouTube and Google Drive — recaps and promos hidden.',
+      'Full-length concert recordings playable directly from YouTube and Google Drive.',
   },
   youtube: {
     title: 'YouTube Recordings',
@@ -79,7 +79,8 @@ const COLLECTION_META: Record<
   },
   drive: {
     title: 'Google Drive Tapes',
-    subtitle: 'Archived full-concert video captures stored on Google Drive.',
+    subtitle:
+      'Full-concert video captures paired with official show artwork, chapter sync, and setlist navigation.',
   },
   setlist: {
     title: 'Shows with Setlists',

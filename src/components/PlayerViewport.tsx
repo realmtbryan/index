@@ -1,8 +1,14 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Hls from 'hls.js';
-import { Disc3, VideoOff } from 'lucide-react';
+import { Disc3, HardDrive, ListMusic, Play, VideoOff } from 'lucide-react';
 import { Show } from '../types';
-import { formatLocation, formatReadableDate, formatShowFullTitle, getBaseVenueName } from '../utils/shows';
+import {
+  formatLocation,
+  formatReadableDate,
+  formatShowFullTitle,
+  getBaseVenueName,
+  parseSetlist,
+} from '../utils/shows';
 import { VideoInfo } from '../utils/video';
 
 export interface PlayerViewportHandle {
@@ -99,6 +105,10 @@ export const PlayerViewport = forwardRef<PlayerViewportHandle, PlayerViewportPro
     const mediaRef = useRef<HTMLVideoElement | null>(null);
     const [ytFallbackIframe, setYtFallbackIframe] = useState(false);
     const [streamError, setStreamError] = useState<string | null>(null);
+    // Google Drive /preview embeds often open on a blank black frame or SMPTE color bars.
+    // Show a rich Concert Cinema Poster Curtain until the user clicks Play Concert Tape.
+    const [driveStarted, setDriveStarted] = useState(false);
+    const [posterImgFailed, setPosterImgFailed] = useState(false);
 
     const onTimeUpdateRef = useRef(onTimeUpdate);
     const onPlayStateRef = useRef(onPlayStateChange);
@@ -109,6 +119,12 @@ export const PlayerViewport = forwardRef<PlayerViewportHandle, PlayerViewportPro
 
     const location = formatLocation(show);
     const displayVenue = getBaseVenueName(show.venue);
+    const songCount = parseSetlist(show.setlist).length;
+
+    useEffect(() => {
+      setDriveStarted(false);
+      setPosterImgFailed(false);
+    }, [show.id, videoInfo?.embedUrl]);
 
     // Mount YouTube IFrame Player API when source === 'youtube'
     useEffect(() => {
@@ -181,7 +197,10 @@ export const PlayerViewport = forwardRef<PlayerViewportHandle, PlayerViewportPro
               const cur = ytPlayerRef.current.getCurrentTime?.();
               const dur = ytPlayerRef.current.getDuration?.();
               if (typeof cur === 'number' && Number.isFinite(cur)) {
-                onTimeUpdateRef.current(cur, typeof dur === 'number' && Number.isFinite(dur) ? dur : 0);
+                onTimeUpdateRef.current(
+                  cur,
+                  typeof dur === 'number' && Number.isFinite(dur) ? dur : 0
+                );
               }
             } catch {
               // Ignore polling errors while iframe initializes
@@ -276,6 +295,8 @@ export const PlayerViewport = forwardRef<PlayerViewportHandle, PlayerViewportPro
             mediaRef.current.currentTime = safe;
             mediaRef.current.play().catch(() => {});
             onTimeUpdateRef.current(safe, mediaRef.current.duration || 0);
+          } else if (videoInfo?.source === 'drive') {
+            setDriveStarted(true);
           }
         },
         seekRelative: (deltaSeconds: number) => {
@@ -312,6 +333,8 @@ export const PlayerViewport = forwardRef<PlayerViewportHandle, PlayerViewportPro
             } else {
               mediaRef.current.pause();
             }
+          } else if (videoInfo?.source === 'drive') {
+            setDriveStarted(true);
           }
         },
         requestFullscreen: () => {
@@ -331,6 +354,8 @@ export const PlayerViewport = forwardRef<PlayerViewportHandle, PlayerViewportPro
       videoInfo?.source === 'hls' ||
       videoInfo?.source === 'direct-video' ||
       videoInfo?.source === 'direct-audio';
+
+    const driveArtwork = !posterImgFailed && show.nugsArtworkUrl ? show.nugsArtworkUrl : null;
 
     return (
       <div
@@ -371,15 +396,85 @@ export const PlayerViewport = forwardRef<PlayerViewportHandle, PlayerViewportPro
             />
           )
         ) : videoInfo.source === 'drive' ? (
-          <iframe
-            key={`${show.id}-${videoInfo.embedUrl}`}
-            src={videoInfo.embedUrl}
-            className="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-            title={formatShowFullTitle(show)}
-          />
+          <div className="w-full h-full relative bg-[#0b0b0e]">
+            {driveStarted ? (
+              <iframe
+                key={`${show.id}-${videoInfo.embedUrl}`}
+                src={videoInfo.embedUrl}
+                className="w-full h-full border-0 bg-black"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+                title={formatShowFullTitle(show)}
+              />
+            ) : (
+              /* Concert Cinema Pre-Roll Poster Curtain — replaces Drive's blank black / SMPTE preview */
+              <button
+                type="button"
+                onClick={() => setDriveStarted(true)}
+                aria-label={`Play concert video for ${displayVenue} on ${show.date}`}
+                className="group w-full h-full relative flex flex-col items-center justify-center text-center overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400"
+              >
+                {driveArtwork ? (
+                  <>
+                    <img
+                      src={driveArtwork}
+                      alt=""
+                      aria-hidden="true"
+                      referrerPolicy="no-referrer"
+                      onError={() => setPosterImgFailed(true)}
+                      className="absolute inset-0 w-full h-full object-cover object-center scale-[1.03] group-hover:scale-[1.06] transition-transform duration-500 ease-out"
+                    />
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-0 bg-gradient-to-t from-[#09090b]/95 via-[#09090b]/55 to-[#09090b]/45"
+                    />
+                  </>
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    className="absolute inset-0 bg-gradient-to-br from-[#291b14] via-[#131217] to-[#09090d]"
+                    style={{
+                      backgroundImage:
+                        'radial-gradient(circle at 75% 20%, rgba(251,191,36,0.28), transparent 55%), linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px)',
+                      backgroundSize: '100% 100%, 32px 32px, 32px 32px',
+                    }}
+                  />
+                )}
+
+                <div className="relative z-10 flex flex-col items-center px-6 max-w-2xl">
+                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-amber-400 group-hover:bg-amber-300 group-hover:scale-105 text-zinc-950 flex items-center justify-center shadow-[0_12px_40px_rgba(0,0,0,0.65)] transition-all duration-200 mb-5">
+                    <Play
+                      className="w-7 h-7 md:w-8 md:h-8 fill-zinc-950 translate-x-0.5"
+                      aria-hidden="true"
+                    />
+                  </div>
+
+                  <p className="text-xs md:text-sm font-mono tabular-nums text-amber-300 tracking-wide mb-1.5">
+                    {formatReadableDate(show.date)}
+                    {location ? ` · ${location}` : ''}
+                  </p>
+
+                  <h2 className="font-serif text-2xl md:text-4xl font-semibold text-[#faf8f3] tracking-tight drop-shadow-md">
+                    {displayVenue}
+                  </h2>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-xs text-zinc-300">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/55 border border-white/15 backdrop-blur-sm">
+                      <HardDrive className="w-3.5 h-3.5 text-amber-400" aria-hidden="true" />
+                      <span>Full Concert Video</span>
+                    </span>
+                    {songCount > 0 && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/55 border border-white/15 backdrop-blur-sm font-mono tabular-nums">
+                        <ListMusic className="w-3.5 h-3.5 text-amber-300" aria-hidden="true" />
+                        <span>{songCount} songs</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            )}
+          </div>
         ) : isDirectMedia ? (
           <div className="w-full h-full relative bg-[#0b0b0e] flex items-center justify-center">
             {videoInfo.source === 'direct-audio' && (

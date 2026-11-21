@@ -221,10 +221,31 @@ test('global recap hiding & multi-part grouping collapse split shows cleanly on 
   assert.equal(mobile[0].parts.length, 1);
   assert.equal(mobile[0].primaryShow.sourceType, 'drive');
 
-  // October 2026 Nugs Subscriber Livestream opener previews are hidden from Watchable/YouTube feeds
+  // Short tour recaps (2025 1-3m clips) and Nugs Subscriber Livestream previews (2026) are hidden globally
   assert.equal(
     groups.some((g) => g.primaryShow.id === '2026-10-31-extra'),
     false
+  );
+  assert.equal(
+    groups.some((g) => g.primaryShow.id === '2026-04-02-1489'),
+    false
+  );
+  assert.equal(
+    groups.some((g) => g.primaryShow.id === '2025-09-14-1452'),
+    false
+  );
+  assert.equal(
+    groups.some((g) => g.primaryShow.id === '2025-08-12-1441'),
+    false
+  );
+  // Genuine full-length 2025/2026 concerts remain playable
+  assert.equal(
+    groups.some((g) => g.primaryShow.id === '2026-04-18-1497'),
+    true
+  );
+  assert.equal(
+    groups.some((g) => g.primaryShow.id === '2025-10-31-1466'),
+    true
   );
 });
 
